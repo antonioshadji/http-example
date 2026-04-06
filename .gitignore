@@ -1,0 +1,7 @@
+# Binaries
+http-example
+http-example-*
+*.exe
+
+# OS
+.DS_Store
