@@ -78,6 +78,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          shopt -s globstar
           gh release create "${{ steps.version.outputs.tag }}" \
             artifacts/**/* \
             --title "${{ steps.version.outputs.tag }}" \
