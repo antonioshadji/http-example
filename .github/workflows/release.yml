@@ -61,6 +61,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
+          merge-multiple: true
 
       - name: Determine next version
         id: version
@@ -78,8 +79,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          shopt -s globstar
           gh release create "${{ steps.version.outputs.tag }}" \
-            artifacts/**/* \
+            artifacts/* \
             --title "${{ steps.version.outputs.tag }}" \
             --generate-notes
