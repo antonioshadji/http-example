@@ -6,7 +6,7 @@ Refactor the HTTP server to serve an external HTML file embedded into the binary
 
 ## File Changes
 
-### New: `templates/index.html`
+### New: `content/templates/index.html`
 
 Standalone HTML file with dark terminal styling:
 - Dark background (`#1a1a2e` or similar)
@@ -17,11 +17,11 @@ Standalone HTML file with dark terminal styling:
 
 ### New: `content/content.go`
 
-Package `content` at repo root:
-- `//go:embed templates/index.html` directive
+Package `content`:
+- `//go:embed templates/index.html` directive (path relative to `content/` directory)
 - Exports `var IndexHTML []byte`
 
-This package exists solely to embed assets from the repo root and make them available to other packages.
+The `templates/` folder lives inside `content/` so that `//go:embed` can reference it directly (Go embed paths are relative to the source file's directory and cannot use `..`).
 
 ### Modified: `server/server.go`
 

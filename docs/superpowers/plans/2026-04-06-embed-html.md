@@ -4,7 +4,7 @@
 
 **Goal:** Replace the inline HTML string with an embedded HTML file served via Go's `embed` package, styled with a dark terminal theme.
 
-**Architecture:** HTML lives in `templates/index.html`, embedded by a `content` package at repo root, passed as `[]byte` to a refactored `NewHandler(html []byte)` in the `server` package. Pure functional — handler receives its data, doesn't fetch it.
+**Architecture:** HTML lives in `content/templates/index.html`, embedded by `content/content.go` which exports `IndexHTML []byte`. `main.go` imports `content` and passes the bytes to `NewHandler(html []byte)`. Pure functional — handler receives its data, doesn't fetch it.
 
 **Tech Stack:** Go 1.26.1, `embed` stdlib package.
 
@@ -14,18 +14,34 @@
 
 | File | Action | Responsibility |
 |------|--------|---------------|
-| `templates/index.html` | Create | Styled HTML page with dark terminal theme |
+| `content/templates/index.html` | Create | Styled HTML page with dark terminal theme |
 | `content/content.go` | Create | Embeds `templates/index.html` as `IndexHTML []byte` |
 | `server/server.go` | Modify | `NewHandler(html []byte)` — accepts HTML, serves it |
 | `server/server_test.go` | Modify | Pass test HTML bytes to `NewHandler` |
 | `main.go` | Modify | Import `content`, pass `content.IndexHTML` to `NewHandler` |
+
+## Structure
+
+```
+http-example/
+├── content/
+│   ├── content.go              # //go:embed templates/index.html
+│   └── templates/
+│       └── index.html          # Dark terminal-themed HTML page
+├── server/
+│   ├── server.go               # NewHandler(html []byte) http.Handler
+│   └── server_test.go          # Tests with test HTML bytes
+├── main.go                     # Imports content, wires handler, port retry
+├── go.mod
+└── ...
+```
 
 ---
 
 ### Task 1: Create the HTML template file
 
 **Files:**
-- Create: `templates/index.html`
+- Create: `content/templates/index.html`
 
 - [ ] **Step 1: Create the HTML file**
 
@@ -79,7 +95,7 @@
 - [ ] **Step 2: Commit**
 
 ```bash
-git add templates/index.html
+git add content/templates/index.html
 git commit -m "feat: add styled HTML template with dark terminal theme"
 ```
 
@@ -207,37 +223,24 @@ git commit -m "refactor: NewHandler accepts html []byte parameter"
 
 ---
 
-### Task 4: Create the content embed package
+### Task 4: Create the content embed package and update main.go
 
 **Files:**
 - Create: `content/content.go`
+- Modify: `main.go`
 
-Note: The `//go:embed` directive uses a path relative to the module root. Since `content/` is a subdirectory, the path must be `../templates/index.html`. However, Go's embed does not allow `..` paths. Instead, the embed directive must reference a path relative to the file's own directory. Since `content/content.go` is in `content/`, it cannot directly embed `templates/index.html` from the parent.
+- [ ] **Step 1: Create content/content.go**
 
-**Corrected approach:** The `//go:embed` directive in `content/content.go` must reference a path relative to the `content/` directory. Since `templates/` is a sibling, not a child, we need to place `content.go` at the repo root instead.
+```go
+package content
 
-Actually — let's place `content.go` at the repo root in package `content` with a directory named `content/`. The `//go:embed` directive path is relative to the source file, so `content/content.go` cannot reach `../templates/`. The solution: place the embed file at the repo root.
+import _ "embed"
 
-**Revised approach:** Create `embed.go` in the repo root as part of a separate package won't work either — Go requires one package per directory, and `main.go` is already `package main` at root.
-
-**Final correct approach:** Move the embed into `main.go` itself, since `main.go` is at the repo root and can access `templates/index.html`. Then pass the embedded bytes to `NewHandler`. This is simpler and correct.
-
-Wait — the spec says to create `content/content.go`. Let me reconsider. We can make this work by putting `templates/` inside `content/`:
-
-```
-content/
-├── content.go
-└── templates/
-    └── index.html
+//go:embed templates/index.html
+var IndexHTML []byte
 ```
 
-But the spec says `templates/` at the repo root. The cleanest solution that matches the spec's intent (separate embed package, HTML at repo root) is to embed directly in `main.go`. Let me update this task accordingly.
-
-**Revised files:**
-- Modify: `main.go` (add embed directive)
-- Skip creating `content/content.go`
-
-- [ ] **Step 1: Update main.go with embed and new NewHandler call**
+- [ ] **Step 2: Update main.go**
 
 Replace the entire contents of `main.go` with:
 
@@ -245,20 +248,17 @@ Replace the entire contents of `main.go` with:
 package main
 
 import (
-	_ "embed"
 	"fmt"
 	"log"
 	"net"
 	"net/http"
 
+	"github.com/antonioshadji/http-example/content"
 	"github.com/antonioshadji/http-example/server"
 )
 
-//go:embed templates/index.html
-var indexHTML []byte
-
 func main() {
-	handler := server.NewHandler(indexHTML)
+	handler := server.NewHandler(content.IndexHTML)
 
 	const basePort = 8080
 	const maxAttempts = 10
@@ -284,7 +284,7 @@ func main() {
 }
 ```
 
-- [ ] **Step 2: Verify it compiles**
+- [ ] **Step 3: Verify it compiles**
 
 ```bash
 go build -o /dev/null .
@@ -292,7 +292,7 @@ go build -o /dev/null .
 
 Expected: Exits 0, no errors.
 
-- [ ] **Step 3: Run all tests**
+- [ ] **Step 4: Run all tests**
 
 ```bash
 go test ./... -v
@@ -300,11 +300,11 @@ go test ./... -v
 
 Expected: All tests PASS.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
-git add main.go
-git commit -m "feat: embed templates/index.html and pass to NewHandler"
+git add content/content.go main.go
+git commit -m "feat: add content embed package and wire into main"
 ```
 
 ---
@@ -337,7 +337,3 @@ gh run list --limit 1
 ```
 
 Expected: Shows a queued or in-progress run for the latest push.
-
-### Note on spec deviation
-
-The spec called for a separate `content/content.go` package to hold the embed directive. However, Go's `//go:embed` paths are relative to the source file's directory, and a file in `content/` cannot reference `../templates/`. Rather than moving `templates/` inside `content/` (contradicting the spec's "folder in the root" requirement), the embed is placed in `main.go` which sits at the repo root and can naturally access `templates/index.html`. This achieves the same goal — HTML file embedded into the binary — with one fewer package. The `NewHandler(html []byte)` signature is preserved exactly as designed, keeping the handler pure and testable.
