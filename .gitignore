@@ -5,3 +5,6 @@ http-example-*
 
 # OS
 .DS_Store
+
+# Brainstorm sessions
+.superpowers/
