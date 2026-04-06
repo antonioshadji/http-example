@@ -6,11 +6,12 @@ import (
 	"net"
 	"net/http"
 
+	"github.com/antonioshadji/http-example/content"
 	"github.com/antonioshadji/http-example/server"
 )
 
 func main() {
-	handler := server.NewHandler()
+	handler := server.NewHandler(content.IndexHTML)
 
 	const basePort = 8080
 	const maxAttempts = 10
