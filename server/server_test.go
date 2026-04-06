@@ -9,8 +9,10 @@ import (
 	"github.com/antonioshadji/http-example/server"
 )
 
+var testHTML = []byte("<html><body>I'm running on your machine</body></html>")
+
 func TestNewHandler_StatusOK(t *testing.T) {
-	handler := server.NewHandler()
+	handler := server.NewHandler(testHTML)
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
 
@@ -22,7 +24,7 @@ func TestNewHandler_StatusOK(t *testing.T) {
 }
 
 func TestNewHandler_BodyContainsMessage(t *testing.T) {
-	handler := server.NewHandler()
+	handler := server.NewHandler(testHTML)
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
 
@@ -35,7 +37,7 @@ func TestNewHandler_BodyContainsMessage(t *testing.T) {
 }
 
 func TestNewHandler_ContentTypeHTML(t *testing.T) {
-	handler := server.NewHandler()
+	handler := server.NewHandler(testHTML)
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
 
